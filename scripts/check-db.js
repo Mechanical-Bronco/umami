@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import { execSync } from 'node:child_process';
 import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 import chalk from 'chalk';
 import semver from 'semver';
 import { PrismaClient } from '../generated/prisma/client.js';
@@ -15,10 +16,14 @@ if (process.env.SKIP_DB_CHECK) {
 
 const url = new URL(process.env.DATABASE_URL);
 
-const adapter = new PrismaPg(
-  { connectionString: url.toString() },
-  { schema: url.searchParams.get('schema') },
-);
+const pool = new pg.Pool({
+    connectionString: url.toString(),
+    family: 4, // Force IPv4 — Vercel cannot reach IPv6 addresses
+  });
+
+const adapter = new PrismaPg(pool, {
+    schema: url.searchParams.get('schema'),
+  });
 
 const prisma = new PrismaClient({ adapter });
 
