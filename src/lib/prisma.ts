@@ -305,8 +305,11 @@ function getClient() {
   const logQuery = process.env.LOG_QUERY;
   const schema = getSchema();
 
-  const baseAdapter = new PrismaPg({ connectionString: url }, { schema });
+    import pg from 'pg';
+  // ... (put the import at the top of the file with the other imports)
 
+  const pool = new pg.Pool({ connectionString: url, family: 4 });
+  const baseAdapter = new PrismaPg(pool, { schema });
   const baseClient = new PrismaClient({
     adapter: baseAdapter,
     errorFormat: 'pretty',
@@ -323,8 +326,9 @@ function getClient() {
     return baseClient;
   }
 
-  const replicaAdapter = new PrismaPg({ connectionString: replicaUrl }, { schema });
-
+    const replicaPool = new pg.Pool({ connectionString: replicaUrl, family: 4 });
+  const replicaAdapter = new PrismaPg(replicaPool, { schema });
+  
   const replicaClient = new PrismaClient({
     adapter: replicaAdapter,
     errorFormat: 'pretty',
