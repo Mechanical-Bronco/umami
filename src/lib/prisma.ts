@@ -1,4 +1,3 @@
-import dns from 'node:dns';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
 import debug from 'debug';
@@ -6,10 +5,6 @@ import { PrismaClient } from '@/generated/prisma/client';
 import { DEFAULT_PAGE_SIZE, FILTER_COLUMNS, OPERATORS, SESSION_COLUMNS } from './constants';
 import { filtersObjectToArray } from './params';
 import type { Operator, QueryFilters, QueryOptions } from './types';
-
-// Force IPv4 DNS resolution — Vercel cannot reach IPv6 addresses,
-// and Supabase pooler hostnames resolve to IPv6 (AAAA records) by default.
-dns.setDefaultResultOrder('ipv4first');
 
 const log = debug('umami:prisma');
 
