@@ -7,9 +7,27 @@ import chalk from 'chalk';
 import semver from 'semver';
 import { PrismaClient } from '../generated/prisma/client.js';
 
-// Force IPv4 DNS resolution — Vercel build environment cannot reach IPv6 addresses,
-// and Supabase pooler hostnames resolve to IPv6 (AAAA records) by default.
+// ---------------------------------------------------------------------------
+// Force IPv4 DNS resolution — Vercel build containers lack IPv6 connectivity,
+// but Supabase pooler hostnames resolve to both A (IPv4) and AAAA (IPv6).
+// Node >=17 defaults to 'verbatim' order, so IPv6 may be tried first.
+// ---------------------------------------------------------------------------
 dns.setDefaultResultOrder('ipv4first');
+
+// Belt-and-suspenders: monkey-patch dns.lookup to force family=4
+const _origLookup = dns.lookup;
+dns.lookup = function (hostname, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  if (typeof options === 'number') {
+    options = { family: options };
+  }
+  options = Object.assign({}, options, { family: 4 });
+  console.log(`[ipv4-fix] dns.lookup("${hostname}", family=${options.family})`);
+  return _origLookup.call(dns, hostname, options, callback);
+};
 
 const MIN_VERSION = '9.4.0';
 
