@@ -1,3 +1,4 @@
+import dns from 'node:dns';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
 import debug from 'debug';
@@ -5,6 +6,10 @@ import { PrismaClient } from '@/generated/prisma/client';
 import { DEFAULT_PAGE_SIZE, FILTER_COLUMNS, OPERATORS, SESSION_COLUMNS } from './constants';
 import { filtersObjectToArray } from './params';
 import type { Operator, QueryFilters, QueryOptions } from './types';
+
+// Force IPv4 DNS resolution — Vercel cannot reach IPv6 addresses,
+// and Supabase pooler hostnames resolve to IPv6 (AAAA records) by default.
+dns.setDefaultResultOrder('ipv4first');
 
 const log = debug('umami:prisma');
 
@@ -305,11 +310,8 @@ function getClient() {
   const logQuery = process.env.LOG_QUERY;
   const schema = getSchema();
 
-    import pg from 'pg';
-  // ... (put the import at the top of the file with the other imports)
+  const baseAdapter = new PrismaPg({ connectionString: url }, { schema });
 
-  const pool = new pg.Pool({ connectionString: url, family: 4 });
-  const baseAdapter = new PrismaPg(pool, { schema });
   const baseClient = new PrismaClient({
     adapter: baseAdapter,
     errorFormat: 'pretty',
@@ -326,9 +328,8 @@ function getClient() {
     return baseClient;
   }
 
-    const replicaPool = new pg.Pool({ connectionString: replicaUrl, family: 4 });
-  const replicaAdapter = new PrismaPg(replicaPool, { schema });
-  
+  const replicaAdapter = new PrismaPg({ connectionString: replicaUrl }, { schema });
+
   const replicaClient = new PrismaClient({
     adapter: replicaAdapter,
     errorFormat: 'pretty',
