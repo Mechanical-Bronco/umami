@@ -1,33 +1,10 @@
 /* eslint-disable no-console */
 import 'dotenv/config';
-import dns from 'node:dns';
 import { execSync } from 'node:child_process';
 import { PrismaPg } from '@prisma/adapter-pg';
 import chalk from 'chalk';
 import semver from 'semver';
 import { PrismaClient } from '../generated/prisma/client.js';
-
-// ---------------------------------------------------------------------------
-// Force IPv4 DNS resolution — Vercel build containers lack IPv6 connectivity,
-// but Supabase pooler hostnames resolve to both A (IPv4) and AAAA (IPv6).
-// Node >=17 defaults to 'verbatim' order, so IPv6 may be tried first.
-// ---------------------------------------------------------------------------
-dns.setDefaultResultOrder('ipv4first');
-
-// Belt-and-suspenders: monkey-patch dns.lookup to force family=4
-const _origLookup = dns.lookup;
-dns.lookup = function (hostname, options, callback) {
-  if (typeof options === 'function') {
-    callback = options;
-    options = {};
-  }
-  if (typeof options === 'number') {
-    options = { family: options };
-  }
-  options = Object.assign({}, options, { family: 4 });
-  console.log(`[ipv4-fix] dns.lookup("${hostname}", family=${options.family})`);
-  return _origLookup.call(dns, hostname, options, callback);
-};
 
 const MIN_VERSION = '9.4.0';
 
@@ -90,9 +67,7 @@ async function checkDatabaseVersion() {
 
 async function applyMigration() {
   if (!process.env.SKIP_DB_MIGRATION) {
-    console.log(execSync('prisma migrate deploy', {
-      env: { ...process.env, NODE_OPTIONS: '--dns-result-order=ipv4first' },
-    }).toString());
+    console.log(execSync('prisma migrate deploy').toString());
 
     success('Database is up to date.');
   }
